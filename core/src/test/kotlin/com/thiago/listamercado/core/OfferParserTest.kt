@@ -159,4 +159,31 @@ class OfferParserTest {
         )
         assertTrue(offers.isEmpty())
     }
+    @Test
+    fun parsesGridFromPdfWords() {
+        // Palavras soltas como o PdfBox entrega: grade 2x2 com nome em cima e preço embaixo.
+        fun word(text: String, x: Float, y: Float, h: Float = 12f) =
+            TextBox(text, x, y, x + text.length * h * 0.55f, y + h)
+        val words = listOf(
+            word("Leite", 20f, 100f), word("Integral", 56f, 100f), word("Piracanjuba", 116f, 100f), word("1L", 200f, 100f),
+            word("R$", 20f, 130f), word("4,99", 42f, 122f, 24f),
+            word("Café", 320f, 100f), word("Melitta", 356f, 100f), word("500g", 412f, 100f),
+            word("R$", 320f, 130f), word("19,90", 342f, 122f, 24f),
+            word("Sabão", 20f, 300f), word("em", 64f, 300f), word("Pó", 86f, 300f), word("Omo", 108f, 300f), word("1,6kg", 132f, 300f),
+            word("De", 20f, 320f, 10f), word("R$", 40f, 320f, 10f), word("29,90", 60f, 320f, 10f),
+            word("Por", 20f, 336f, 10f), word("R$", 44f, 336f, 10f), word("22,90", 64f, 330f, 24f),
+            word("Papel", 320f, 300f), word("Higiênico", 360f, 300f), word("Neve", 430f, 300f),
+            word("12", 320f, 316f), word("rolos", 340f, 316f),
+            word("R$", 320f, 340f), word("15,49", 342f, 334f, 24f),
+            word("Ofertas", 20f, 500f, 8f), word("válidas", 56f, 500f, 8f), word("até", 92f, 500f, 8f), word("20/10/2026", 110f, 500f, 8f),
+        )
+        val offers = OfferParser.parsePage(OfferParser.groupWords(words))
+        assertEquals(4, offers.size)
+        assertEquals(499L, offers.byName("Leite Integral Piracanjuba 1L").priceCents)
+        assertEquals(1990L, offers.byName("Café Melitta 500g").priceCents)
+        val sabao = offers.byName("Sabão em Pó Omo 1,6kg")
+        assertEquals(2290L, sabao.priceCents)
+        assertEquals(2990L, sabao.regularPriceCents)
+        assertEquals(1549L, offers.byName("Papel Higiênico Neve 12 rolos").priceCents)
+    }
 }
