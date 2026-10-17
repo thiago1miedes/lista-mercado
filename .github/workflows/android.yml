@@ -1,0 +1,43 @@
+name: Build APK
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Testes da lógica (leitura de encartes, comparação de preços)
+        run: ./gradlew :core:test --stacktrace
+
+      - name: Gerar APK
+        run: ./gradlew :app:assembleRelease --stacktrace
+
+      - name: Renomear APK
+        run: cp app/build/outputs/apk/release/app-release.apk lista-mercado.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lista-mercado-apk
+          path: lista-mercado.apk
+
+      # Ao criar uma tag (ex.: v1.0.0), o APK fica disponível na página de Releases do GitHub.
+      - name: Publicar release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: lista-mercado.apk
