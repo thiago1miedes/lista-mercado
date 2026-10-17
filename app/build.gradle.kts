@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.roborazzi)
 }
 
 android {
@@ -52,6 +53,14 @@ android {
         compose = true
     }
 
+    testOptions {
+        unitTests {
+            // Testes de interface com Robolectric (Compose) + capturas de tela com Roborazzi.
+            isIncludeAndroidResources = true
+            all { it.systemProperty("robolectric.pixelCopyRenderMode", "hardware") }
+        }
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -87,4 +96,15 @@ dependencies {
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.pdfbox.android)
     implementation(libs.mlkit.text.recognition)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.test.ext.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    debugImplementation(libs.compose.ui.test.manifest)
 }

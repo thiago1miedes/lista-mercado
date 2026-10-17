@@ -21,19 +21,52 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Testes da lógica (leitura de encartes, comparação de preços)
-        run: ./gradlew :core:test --stacktrace
+      - name: Testes (lógica, interface e capturas de tela)
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew :core:test :app:recordRoborazziDebug --stacktrace --continue 2>&1 | tee build-test.log
 
       - name: Gerar APK
-        run: ./gradlew :app:assembleRelease --stacktrace
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew :app:assembleRelease --stacktrace 2>&1 | tee build-apk.log
+          cp app/build/outputs/apk/release/app-release.apk lista-mercado.apk
 
-      - name: Renomear APK
-        run: cp app/build/outputs/apk/release/app-release.apk lista-mercado.apk
+      - name: Relatório (anotações)
+        if: always()
+        run: python3 .github/scripts/report.py build-test.log build-apk.log
 
       - uses: actions/upload-artifact@v4
         with:
           name: lista-mercado-apk
           path: lista-mercado.apk
+
+      - name: Relatórios de teste
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorios-de-teste
+          path: |
+            **/build/reports/tests/
+            app/src/test/screenshots/
+          if-no-files-found: ignore
+
+      # Commits com "[capturas]" na mensagem publicam as capturas de tela em docs/screenshots.
+      - name: Publicar capturas de tela
+        if: success() && github.event_name == 'push' && contains(github.event.head_commit.message, '[capturas]')
+        shell: bash
+        run: |
+          mkdir -p docs/screenshots
+          rm -f docs/screenshots/*.png
+          cp app/src/test/screenshots/*.png docs/screenshots/ 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots
+          if git diff --cached --quiet; then echo "Sem mudanças nas capturas"; exit 0; fi
+          git commit -m "Capturas de tela de ${GITHUB_SHA::7} [skip ci]"
+          git push origin "HEAD:${GITHUB_REF_NAME}" || echo "::warning::Não foi possível publicar as capturas"
 
       # Ao criar uma tag (ex.: v1.0.0), o APK fica disponível na página de Releases do GitHub.
       - name: Publicar release
